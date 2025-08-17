@@ -1,5 +1,8 @@
-﻿namespace BookingApi.Data.Models
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace BookingApi.Data.Models
 {
+    [Index(nameof(Email), IsUnique = true)]
     public class User
     {
         public int Id { get; set; }
