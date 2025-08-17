@@ -60,6 +60,7 @@ namespace BookingApi.Controllers
             }
         }
 
+        [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDto request)
         {
             try
@@ -84,8 +85,8 @@ namespace BookingApi.Controllers
         {
             List<Claim> claims = new()
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name)
+                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new(ClaimTypes.Name, user.Name)
             };
 
             SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(
@@ -95,7 +96,7 @@ namespace BookingApi.Controllers
 
             SecurityTokenDescriptor tokenDescriptor = new()
             {
-                Subject = new ClaimsIdentity(claims),
+                Subject = new(claims),
                 Expires = DateTime.Now.AddDays(1),
                 SigningCredentials = creds,
                 Issuer = _configuration.GetSection("Jwt:Issuer").Value
