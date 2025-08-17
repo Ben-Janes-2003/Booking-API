@@ -32,3 +32,6 @@ bld/
 # Secrets
 **/appsettings.Development.json
 **/secrets.json
+
+# Environment files
+.env
