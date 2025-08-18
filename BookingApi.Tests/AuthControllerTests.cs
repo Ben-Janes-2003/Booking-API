@@ -17,7 +17,7 @@ namespace BookingApi.Tests
 
         public AuthControllerTests()
         {
-            var options = new DbContextOptionsBuilder<BookingDbContext>()
+            DbContextOptions<BookingDbContext> options = new DbContextOptionsBuilder<BookingDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
             _context = new BookingDbContext(options);
