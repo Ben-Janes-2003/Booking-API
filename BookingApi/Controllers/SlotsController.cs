@@ -51,6 +51,14 @@ namespace BookingApi.Controllers
         {
             try
             {
+                if (request.StartTime < DateTime.UtcNow)
+                {
+                    return BadRequest("Start time cannot be in the past.");
+                }
+                if (request.DurationMinutes <= 0)
+                {
+                    return BadRequest("Duration must be a positive number.");
+                }
                 TimeSlot timeSlot = new()
                 {
                     StartTime = request.StartTime,
