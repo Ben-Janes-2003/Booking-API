@@ -1,5 +1,6 @@
 ﻿using BookingApi.Data;
 using BookingApi.Data.Dto;
+using BookingApi.Data.Enums;
 using BookingApi.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,39 @@ namespace BookingApi.Controllers
             {
                 _logger.LogError(ex, "An error occurred while fetching available slots.");
                 return StatusCode(StatusCodes.Status500InternalServerError, $"An unexpected error occurred. Please try again later.");
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = nameof(Role.Admin))]
+        public async Task<IActionResult> CreateTimeSlot(CreateTimeSlotDto request)
+        {
+            try
+            {
+                if (request.StartTime < DateTime.UtcNow)
+                {
+                    return BadRequest("Start time cannot be in the past.");
+                }
+                if (request.DurationMinutes <= 0)
+                {
+                    return BadRequest("Duration must be a positive number.");
+                }
+                TimeSlot timeSlot = new()
+                {
+                    StartTime = request.StartTime,
+                    DurationMinutes = request.DurationMinutes,
+                    IsBooked = false
+                };
+
+                _context.TimeSlots.Add(timeSlot);
+                await _context.SaveChangesAsync();
+
+                return Ok(timeSlot);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating a time slot.");
+                return StatusCode(500, "An unexpected error occurred.");
             }
         }
     }

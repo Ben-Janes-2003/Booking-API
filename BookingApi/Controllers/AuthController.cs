@@ -1,5 +1,6 @@
 ﻿using BookingApi.Data;
 using BookingApi.Data.Dto;
+using BookingApi.Data.Enums;
 using BookingApi.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -86,7 +87,8 @@ namespace BookingApi.Controllers
             List<Claim> claims = new()
             {
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.Name)
+                new(ClaimTypes.Name, user.Name),
+                new(ClaimTypes.Role, user.Role.ToString())
             };
 
             SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(
@@ -106,6 +108,43 @@ namespace BookingApi.Controllers
             SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
 
             return tokenHandler.WriteToken(token);
+        }
+
+        [HttpPost("setup-admin")]
+        public async Task<IActionResult> SetupAdmin(AdminSetupDto request)
+        {
+            try
+            {
+                string? setupKey = _configuration["AdminSetupKey"];
+                if (string.IsNullOrEmpty(setupKey) || request.SetupKey != setupKey)
+                {
+                    return Unauthorized("Invalid setup key.");
+                }
+
+                if (await _context.Users.AnyAsync(u => u.Role == Role.Admin))
+                {
+                    return BadRequest("An admin user already exists.");
+                }
+
+                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                User adminUser = new()
+                {
+                    Name = request.Name,
+                    Email = request.Email,
+                    PasswordHash = passwordHash,
+                    Role = Role.Admin
+                };
+
+                _context.Users.Add(adminUser);
+                await _context.SaveChangesAsync();
+
+                return Ok("Admin user created successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during admin setup.");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
     }
 }

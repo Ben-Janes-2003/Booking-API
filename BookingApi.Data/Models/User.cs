@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using BookingApi.Data.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookingApi.Data.Models
 {
@@ -9,5 +10,6 @@ namespace BookingApi.Data.Models
         public string Name { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string PasswordHash { get; set; } = null!;
+        public Role Role { get; set; } = Role.User;
     }
 }

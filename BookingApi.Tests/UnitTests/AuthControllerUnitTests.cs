@@ -1,21 +1,22 @@
 using BookingApi.Controllers;
 using BookingApi.Data;
 using BookingApi.Data.Dto;
+using BookingApi.Data.Enums;
 using BookingApi.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Microsoft.Extensions.Configuration;
 
-namespace BookingApi.Tests
+namespace BookingApi.Tests.UnitTests
 {
-    public class AuthControllerTests
+    public class AuthControllerUnitTests
     {
         private readonly BookingDbContext _context;
         private readonly AuthController _controller;
 
-        public AuthControllerTests()
+        public AuthControllerUnitTests()
         {
             DbContextOptions<BookingDbContext> options = new DbContextOptionsBuilder<BookingDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -26,6 +27,7 @@ namespace BookingApi.Tests
             Mock<IConfiguration> config = new();
             config.Setup(c => c.GetSection("Jwt:Key").Value).Returns("ThisIsMyTestSuperSecretKeyForMySuperSecureBookingApiApplication12345!");
             config.Setup(c => c.GetSection("Jwt:Issuer").Value).Returns("https://test-issuer.com");
+            config.Setup(c => c["AdminSetupKey"]).Returns("ThisIsAFakeKeyForTestingOnly");
 
             _controller = new AuthController(_context, logger, config.Object);
         }
@@ -109,6 +111,65 @@ namespace BookingApi.Tests
             IActionResult result = await _controller.Login(loginRequest);
 
             Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task SetupAdmin_WithCorrectKeyAndNoExistingAdmin_CreatesAdmin()
+        {
+            AdminSetupDto setupDto = new()
+            {
+                Name = "Admin",
+                Email = "admin@example.com",
+                Password = "AdminPassword123!",
+                SetupKey = "ThisIsAFakeKeyForTestingOnly"
+            };
+
+            IActionResult result = await _controller.SetupAdmin(setupDto);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.True(await _context.Users.AnyAsync(u => u.Role == Role.Admin));
+        }
+
+        [Fact]
+        public async Task SetupAdmin_WithIncorrectKey_ReturnsUnauthorized()
+        {
+            AdminSetupDto setupDto = new()
+            {
+                Name = "Admin",
+                Email = "admin@example.com",
+                Password = "AdminPassword123!",
+                SetupKey = "WRONG-KEY"
+            };
+
+            IActionResult result = await _controller.SetupAdmin(setupDto);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task SetupAdmin_WhenAdminAlreadyExists_ReturnsBadRequest()
+        {
+            User existingAdmin = new()
+            {
+                Name = "Existing Admin",
+                Email = "oldadmin@example.com",
+                PasswordHash = "hash",
+                Role = Role.Admin
+            };
+            _context.Users.Add(existingAdmin);
+            await _context.SaveChangesAsync();
+
+            AdminSetupDto setupDto = new()
+            {
+                Name = "New Admin",
+                Email = "newadmin@example.com",
+                Password = "AdminPassword123!",
+                SetupKey = "ThisIsAFakeKeyForTestingOnly"
+            };
+
+            IActionResult result = await _controller.SetupAdmin(setupDto);
+
+            Assert.IsType<BadRequestObjectResult>(result);
         }
     }
 }

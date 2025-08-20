@@ -9,14 +9,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
 
-namespace BookingApi.Tests
+namespace BookingApi.Tests.UnitTests
 {
-    public class BookingsControllerTests
+    public class BookingsControllerUnitTests
     {
         private readonly BookingDbContext _context;
         private readonly BookingsController _controller;
 
-        public BookingsControllerTests()
+        public BookingsControllerUnitTests()
         {
             DbContextOptions<BookingDbContext> options = new DbContextOptionsBuilder<BookingDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
