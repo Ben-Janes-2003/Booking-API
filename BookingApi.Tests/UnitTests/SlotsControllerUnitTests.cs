@@ -2,19 +2,22 @@
 using BookingApi.Data;
 using BookingApi.Data.Dto;
 using BookingApi.Data.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Security.Claims;
 
-namespace BookingApi.Tests
+namespace BookingApi.Tests.UnitTests
 {
-    public class SlotsControllerTests
+    public class SlotsControllerUnitTests
     {
         private readonly BookingDbContext _context;
         private readonly SlotsController _controller;
 
-        public SlotsControllerTests()
+        public SlotsControllerUnitTests()
         {
             DbContextOptions<BookingDbContext> options = new DbContextOptionsBuilder<BookingDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -39,6 +42,32 @@ namespace BookingApi.Tests
 
             List<TimeSlotDto> slots = Assert.IsAssignableFrom<List<TimeSlotDto>>(result.Value);
             Assert.Single(slots);
+        }
+
+        [Fact]
+        public async Task CreateTimeSlot_WhenCalledByAdmin_ReturnsOk()
+        {
+            ClaimsPrincipal adminUser = new(new ClaimsIdentity(new Claim[]
+            {
+                new(ClaimTypes.NameIdentifier, "-1"),
+                new(ClaimTypes.Role, "Admin")
+            }, "mock"));
+
+            _controller.ControllerContext = new ControllerContext()
+            {
+                HttpContext = new DefaultHttpContext() { User = adminUser }
+            };
+
+            CreateTimeSlotDto newSlotDto = new()
+            {
+                StartTime = DateTime.UtcNow.AddDays(10),
+                DurationMinutes = 60
+            };
+
+            IActionResult result = await _controller.CreateTimeSlot(newSlotDto);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(1, _context.TimeSlots.Count());
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using BookingApi.Data.Models;
+﻿using BookingApi.Data.Enums;
+using BookingApi.Data.Models;
 using Microsoft.EntityFrameworkCore;
 namespace BookingApi.Data
 {
@@ -9,6 +10,15 @@ namespace BookingApi.Data
         public DbSet<Booking> Bookings { get; set; }
         public BookingDbContext(DbContextOptions<BookingDbContext> options) : base(options)
         {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.Role)
+                .HasConversion<string>();
         }
     }
 }
