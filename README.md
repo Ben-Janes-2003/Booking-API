@@ -39,7 +39,7 @@ A robust and secure RESTful API for a booking system, built with modern .NET 9 a
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/YourRepoName.git](https://github.com/YourUsername/YourRepoName.git)
+    git clone [https://github.com/Ben-Janes-2003/Booking-API.git](https://github.com/Ben-Janes-2003/Booking-API.git)
     cd YourRepoName
     ```
 
