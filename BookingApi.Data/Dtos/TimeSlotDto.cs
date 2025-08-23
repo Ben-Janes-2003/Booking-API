@@ -1,8 +1,7 @@
-﻿namespace BookingApi.Data.Dto
+﻿namespace BookingApi.Data.Dto;
+
+public class TimeSlotDto
 {
-    public class TimeSlotDto
-    {
-        public DateTime StartTime { get; set; }
-        public int DurationMinutes { get; set; }
-    }
+    public DateTime StartTime { get; set; }
+    public int DurationMinutes { get; set; }
 }

@@ -22,7 +22,7 @@ services:
       - "8081:8081"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=bookingdb;Username=youruser;Password=${DB_PASSWORD}"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=bookingdb;Username=user;Password=${DB_PASSWORD}"
       Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       AdminSetupKey: ${ADMIN_SETUP_KEY}

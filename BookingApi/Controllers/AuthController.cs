@@ -11,140 +11,139 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace BookingApi.Controllers
+namespace BookingApi.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class AuthController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController : ControllerBase
+    private readonly BookingDbContext _context;
+    private readonly ILogger<AuthController> _logger;
+    private readonly IConfiguration _configuration;
+
+    public AuthController(BookingDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
     {
-        private readonly BookingDbContext _context;
-        private readonly ILogger<AuthController> _logger;
-        private readonly IConfiguration _configuration;
+        _context = context;
+        _logger = logger;
+        _configuration = configuration;
+    }
 
-        public AuthController(BookingDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(UserRegistrationDto request)
+    {
+        try
         {
-            _context = context;
-            _logger = logger;
-            _configuration = configuration;
-        }
+            bool userExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(UserRegistrationDto request)
-        {
-            try
+            if (userExists)
             {
-                bool userExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
-
-                if (userExists)
-                {
-                    _logger.LogWarning("User registration failed: Email already exists.");
-                    return BadRequest("Email already exists.");
-                }
-
-                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                User user = new()
-                {
-                    Name = request.Name,
-                    Email = request.Email,
-                    PasswordHash = passwordHash
-                };
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                return Ok("User registered successfully.");
+                _logger.LogWarning("User registration failed: Email already exists.");
+                return BadRequest("Email already exists.");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred during user registration.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
-            }
-        }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(UserLoginDto request)
-        {
-            try
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            User user = new()
             {
-                User? user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-                if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                {
-                    return Unauthorized("Invalid credentials.");
-                }
-
-                string token = CreateToken(user);
-                return Ok(new { Token = token });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred during login.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
-            }
-        }
-
-        private string CreateToken(User user)
-        {
-            List<Claim> claims = new()
-            {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.Name),
-                new(ClaimTypes.Role, user.Role.ToString())
+                Name = request.Name,
+                Email = request.Email,
+                PasswordHash = passwordHash
             };
 
-            SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(
-                _configuration.GetSection("Jwt:Key").Value!));
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
 
-            SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);
+            return Ok("User registered successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred during user registration.");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
+        }
+    }
 
-            SecurityTokenDescriptor tokenDescriptor = new()
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(UserLoginDto request)
+    {
+        try
+        {
+            User? user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                Subject = new(claims),
-                Expires = DateTime.Now.AddDays(1),
-                SigningCredentials = creds,
-                Issuer = _configuration.GetSection("Jwt:Issuer").Value
+                return Unauthorized("Invalid credentials.");
+            }
+
+            string token = CreateToken(user);
+            return Ok(new { Token = token });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred during login.");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
+        }
+    }
+
+    private string CreateToken(User user)
+    {
+        List<Claim> claims = new()
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Role, user.Role.ToString())
+        };
+
+        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(
+            _configuration.GetSection("Jwt:Key").Value!));
+
+        SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);
+
+        SecurityTokenDescriptor tokenDescriptor = new()
+        {
+            Subject = new(claims),
+            Expires = DateTime.Now.AddDays(1),
+            SigningCredentials = creds,
+            Issuer = _configuration.GetSection("Jwt:Issuer").Value
+        };
+
+        JwtSecurityTokenHandler tokenHandler = new();
+        SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return tokenHandler.WriteToken(token);
+    }
+
+    [HttpPost("setup-admin")]
+    public async Task<IActionResult> SetupAdmin(AdminSetupDto request)
+    {
+        try
+        {
+            string? setupKey = _configuration["AdminSetupKey"];
+            if (string.IsNullOrEmpty(setupKey) || request.SetupKey != setupKey)
+            {
+                return Unauthorized("Invalid setup key.");
+            }
+
+            if (await _context.Users.AnyAsync(u => u.Role == Role.Admin))
+            {
+                return BadRequest("An admin user already exists.");
+            }
+
+            string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            User adminUser = new()
+            {
+                Name = request.Name,
+                Email = request.Email,
+                PasswordHash = passwordHash,
+                Role = Role.Admin
             };
 
-            JwtSecurityTokenHandler tokenHandler = new();
-            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+            _context.Users.Add(adminUser);
+            await _context.SaveChangesAsync();
 
-            return tokenHandler.WriteToken(token);
+            return Ok("Admin user created successfully.");
         }
-
-        [HttpPost("setup-admin")]
-        public async Task<IActionResult> SetupAdmin(AdminSetupDto request)
+        catch (Exception ex)
         {
-            try
-            {
-                string? setupKey = _configuration["AdminSetupKey"];
-                if (string.IsNullOrEmpty(setupKey) || request.SetupKey != setupKey)
-                {
-                    return Unauthorized("Invalid setup key.");
-                }
-
-                if (await _context.Users.AnyAsync(u => u.Role == Role.Admin))
-                {
-                    return BadRequest("An admin user already exists.");
-                }
-
-                string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                User adminUser = new()
-                {
-                    Name = request.Name,
-                    Email = request.Email,
-                    PasswordHash = passwordHash,
-                    Role = Role.Admin
-                };
-
-                _context.Users.Add(adminUser);
-                await _context.SaveChangesAsync();
-
-                return Ok("Admin user created successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred during admin setup.");
-                return StatusCode(500, "An unexpected error occurred.");
-            }
+            _logger.LogError(ex, "An error occurred during admin setup.");
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 }
