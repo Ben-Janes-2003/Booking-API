@@ -1,8 +1,7 @@
-﻿namespace BookingApi.Data.Enums
+﻿namespace BookingApi.Data.Enums;
+
+public enum Role
 {
-    public enum Role
-    {
-        User,
-        Admin
-    }
+    User,
+    Admin
 }

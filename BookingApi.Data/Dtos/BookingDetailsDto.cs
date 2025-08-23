@@ -1,8 +1,7 @@
-﻿namespace BookingApi.Data.Dto
+﻿namespace BookingApi.Data.Dto;
+
+public class BookingDetailsDto
 {
-    public class BookingDetailsDto
-    {
-        public int Id { get; set; }
-        public TimeSlotDto TimeSlot { get; set; } = null!;
-    }
+    public int Id { get; set; }
+    public TimeSlotDto TimeSlot { get; set; } = null!;
 }

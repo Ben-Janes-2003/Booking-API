@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BookingApi.Data.Dto
+namespace BookingApi.Data.Dto;
+
+public class CreateBookingDto
 {
-    public class CreateBookingDto
-    {
-        [Required]
-        public int TimeSlotId { get; set; }
-    }
+    [Required]
+    public int TimeSlotId { get; set; }
 }

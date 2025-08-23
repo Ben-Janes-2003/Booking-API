@@ -13,79 +13,77 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 
-namespace BookingApi.Tests.IntegrationTests
+namespace BookingApi.Tests.IntegrationTests;
+public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public class CustomWebApplicationFactory : WebApplicationFactory<Program>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            builder.UseEnvironment("Testing");
+        builder.UseEnvironment("Testing");
 
-            builder.ConfigureServices(services =>
+        builder.ConfigureServices(services =>
+        {
+            ServiceDescriptor? descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<BookingDbContext>));
+            if (descriptor != null)
             {
-                ServiceDescriptor? descriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbContextOptions<BookingDbContext>));
-                if (descriptor != null)
-                {
-                    services.Remove(descriptor);
-                }
-                services.AddDbContext<BookingDbContext>(options =>
-                {
-                    options.UseInMemoryDatabase("InMemoryDbForIntegrationTesting");
-                });
+                services.Remove(descriptor);
+            }
+            services.AddDbContext<BookingDbContext>(options =>
+            {
+                options.UseInMemoryDatabase("InMemoryDbForIntegrationTesting");
             });
-        }
+        });
     }
-    public class SlotsControllerIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+}
+public class SlotsControllerIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
+
+    public SlotsControllerIntegrationTests(CustomWebApplicationFactory factory)
     {
-        private readonly HttpClient _client;
-        private readonly CustomWebApplicationFactory _factory;
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
 
-        public SlotsControllerIntegrationTests(CustomWebApplicationFactory factory)
+    private string GenerateJwtToken(int userId, string role)
+    {
+        var claims = new List<Claim>
         {
-            _factory = factory;
-            _client = factory.CreateClient();
-        }
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(ClaimTypes.Role, role)
+        };
 
-        private string GenerateJwtToken(int userId, string role)
+        SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes("ThisIsMyTestSuperSecretKeyForMySuperSecureBookingApiApplication12345!"));
+        SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);
+
+        SecurityTokenDescriptor tokenDescriptor = new()
         {
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, userId.ToString()),
-                new(ClaimTypes.Role, role)
-            };
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.Now.AddMinutes(5),
+            SigningCredentials = creds,
+            Issuer = "https://test-issuer.com"
+        };
 
-            SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes("ThisIsMyTestSuperSecretKeyForMySuperSecureBookingApiApplication12345!"));
-            SigningCredentials creds = new(key, SecurityAlgorithms.HmacSha512Signature);
+        JwtSecurityTokenHandler tokenHandler = new();
+        SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
 
-            SecurityTokenDescriptor tokenDescriptor = new()
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddMinutes(5),
-                SigningCredentials = creds,
-                Issuer = "https://test-issuer.com"
-            };
+    [Fact]
+    public async Task CreateTimeSlot_WhenCalledByRegularUser_ReturnsForbidden()
+    {
+        string token = GenerateJwtToken(1, nameof(Role.User));
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            JwtSecurityTokenHandler tokenHandler = new();
-            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
-        }
-
-        [Fact]
-        public async Task CreateTimeSlot_WhenCalledByRegularUser_ReturnsForbidden()
+        CreateTimeSlotDto newSlotDto = new()
         {
-            string token = GenerateJwtToken(1, nameof(Role.User));
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            StartTime = DateTime.UtcNow.AddDays(1),
+            DurationMinutes = 60
+        };
 
-            CreateTimeSlotDto newSlotDto = new()
-            {
-                StartTime = DateTime.UtcNow.AddDays(1),
-                DurationMinutes = 60
-            };
+        HttpResponseMessage response = await _client.PostAsJsonAsync("/api/slots", newSlotDto);
 
-            HttpResponseMessage response = await _client.PostAsJsonAsync("/api/slots", newSlotDto);
-
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        }
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
