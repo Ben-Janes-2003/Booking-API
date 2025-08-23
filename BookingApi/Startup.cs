@@ -45,7 +45,9 @@ public class Startup
                       ?? Configuration["AdminSetupKey"];
         string? setupKeyValue = SecretHelper.ResolveAsync(setupKeyEnv).GetAwaiter().GetResult();
 
-        Configuration["AdminSetupKey"] = setupKeyValue;
+        Configuration["Jwt:Key"] = jwtKeyValue;
+        Configuration["Jwt:Issuer"] = issuer;
+        Configuration["AdminSetupKey"] = setupKeyValue;  
 
         services.AddAuthentication(options =>
         {
