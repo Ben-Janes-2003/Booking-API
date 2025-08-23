@@ -1,6 +1,6 @@
 # Booking API
 
-A robust and secure RESTful API for a booking system, built with modern .NET 9 and C#. This project demonstrates a complete, end-to-end feature set, including JWT authentication, role-based authorization, and full unit and integration test coverage. It is designed to be run containerized with Docker and deployed as Infrastructure as Code.
+A robust and secure RESTful API for a booking system, built with modern .NET 8 and C#. This project demonstrates a complete, end-to-end feature set, including JWT authentication, role-based authorization, and full unit and integration test coverage. It is designed to be run containerized with Docker and deployed as Infrastructure as Code.
 
 ---
 
@@ -20,11 +20,11 @@ A robust and secure RESTful API for a booking system, built with modern .NET 9 a
 
 | Category             | Technology                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Backend**          | C#, .NET 9, ASP.NET Core                                                                                      |
-| **Database**         | PostgreSQL, Entity Framework Core                                                                             |
+| **Backend**          | C#, .NET 8, ASP.NET Core                                                                                      |
+| **Database**         | PostgreSQL, Entity Framework Core (Aurora PostgreSQL Serverless v2 on AWS)                                    |
 | **Testing**          | xUnit, Moq, `Microsoft.AspNetCore.Mvc.Testing`                                                                |
 | **Containerization** | Docker, Docker Compose                                                                                        |
-| **Deployment**       | AWS CDK (Infrastructure as Code), AWS Fargate, Amazon RDS                                                     |
+| **Deployment**       | AWS CDK (Infrastructure as Code), AWS Lambda, Amazon API Gateway, Amazon RDS, AWS Secrets Manager             |
 
 ---
 
@@ -32,14 +32,14 @@ A robust and secure RESTful API for a booking system, built with modern .NET 9 a
 
 ### Prerequisites
 
-* .NET 9 SDK
+* .NET 8 SDK
 * Docker Desktop
 
 ### Running Locally
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/Ben-Janes-2003/Booking-API.git](https://github.com/Ben-Janes-2003/Booking-API.git)
+    git clone https://github.com/Ben-Janes-2003/Booking-API.git
     cd Booking-API
     ```
 
