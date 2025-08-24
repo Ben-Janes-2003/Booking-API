@@ -14,7 +14,12 @@ public class InfrastructureServerlessStack : Stack
 {
     internal InfrastructureServerlessStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props)
     {
-        Vpc vpc = new(this, "BookingApiVpc", new VpcProps { MaxAzs = 2, NatGateways = 0 });
+        Vpc vpc = new(this, "BookingApiVpc", new VpcProps { MaxAzs = 2, NatGateways = 0, IpAddresses = IpAddresses.Cidr("10.10.0.0/16") });
+
+        vpc.AddInterfaceEndpoint("SecretsManagerEndpoint", new InterfaceVpcEndpointOptions
+        {
+            Service = InterfaceVpcEndpointAwsService.SECRETS_MANAGER
+        });
 
         DatabaseCluster dbCluster = new(this, "Database", new DatabaseClusterProps
         {
@@ -23,6 +28,7 @@ public class InfrastructureServerlessStack : Stack
                 Version = AuroraPostgresEngineVersion.VER_15_3
             }),
             Vpc = vpc,
+            VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
             Writer = ClusterInstance.ServerlessV2("writer"),
             ServerlessV2MinCapacity = 0.5,
             ServerlessV2MaxCapacity = 1.0,
@@ -40,6 +46,7 @@ public class InfrastructureServerlessStack : Stack
             Handler = "BookingApi::BookingApi.LambdaEntryPoint::FunctionHandlerAsync",
             Code = Code.FromAsset("../BookingApi/bin/Release/net8.0/publish.zip"),
             Vpc = vpc,
+            VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
             MemorySize = 512,
             Timeout = Duration.Seconds(30),
             Environment = new Dictionary<string, string>
