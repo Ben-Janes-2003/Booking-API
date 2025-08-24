@@ -13,21 +13,23 @@ using System.Text;
 
 namespace BookingApi.Controllers;
 
+/// <summary>
+/// Manages user authentication, registration, and initial setup.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
-public class AuthController : ControllerBase
+public class AuthController(BookingDbContext context, ILogger<AuthController> logger, IConfiguration configuration) : ControllerBase
 {
-    private readonly BookingDbContext _context;
-    private readonly ILogger<AuthController> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly BookingDbContext _context = context;
+    private readonly ILogger<AuthController> _logger = logger;
+    private readonly IConfiguration _configuration = configuration;
 
-    public AuthController(BookingDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
-    {
-        _context = context;
-        _logger = logger;
-        _configuration = configuration;
-    }
-
+    /// <summary>
+    /// Registers a new user in the system with the default "User" role.
+    /// </summary>
+    /// <param name="request">The user's details for registration.</param>
+    /// <response code="200">User was registered successfully.</response>
+    /// <response code="400">If a user with the same email already exists.</response>
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserRegistrationDto request)
     {
@@ -61,6 +63,13 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Authenticates a user and returns a JWT token.
+    /// </summary>
+    /// <param name="request">The user's login credentials.</param>
+    /// <returns>A JWT token upon successful authentication.</returns>
+    /// <response code="200">Returns the JWT token.</response>
+    /// <response code="401">If the provided credentials are invalid.</response>
     [HttpPost("login")]
     public async Task<IActionResult> Login(UserLoginDto request)
     {
@@ -110,6 +119,16 @@ public class AuthController : ControllerBase
         return tokenHandler.WriteToken(token);
     }
 
+    /// <summary>
+    /// Creates the initial administrative user.
+    /// </summary>
+    /// <remarks>
+    /// This is a one-time use endpoint protected by a secret key. It should be called once during the initial setup of a new environment to create the first admin account.
+    /// </remarks>
+    /// <param name="request">The details for the new admin and the required setup key.</param>
+    /// <response code="200">Admin user was created successfully.</response>
+    /// <response code="400">If an admin user already exists in the database.</response>
+    /// <response code="401">If the provided setup key is invalid.</response>
     [HttpPost("setup-admin")]
     public async Task<IActionResult> SetupAdmin(AdminSetupDto request)
     {

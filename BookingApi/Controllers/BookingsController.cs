@@ -9,20 +9,33 @@ using System.Security.Claims;
 
 namespace BookingApi.Controllers;
 
+/// <summary>
+/// Manages user bookings within the system. All endpoints require authentication.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-public class BookingsController : BaseApiController
+public class BookingsController(BookingDbContext context, ILogger<BookingsController> logger) : BaseApiController
 {
-    private readonly BookingDbContext _context;
-    private readonly ILogger<BookingsController> _logger;
+    private readonly BookingDbContext _context = context;
+    private readonly ILogger<BookingsController> _logger = logger;
 
-    public BookingsController(BookingDbContext context, ILogger<BookingsController> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
+    /// <summary>
+    /// Creates a new booking for the authenticated user.
+    /// </summary>
+    /// <remarks>
+    /// The user must provide a valid JWT token. The request will fail if the requested TimeSlot is already booked or does not exist.
+    /// </remarks>
+    /// <param name="bookingDto">The ID of the time slot to be booked.</param>
+    /// <returns>The newly created booking record.</returns>
+    /// <response code="201">Returns the newly created booking.</response>
+    /// <response code="400">If the time slot is no longer available.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    /// <response code="404">If the requested time slot does not exist.</response>
+    [ProducesResponseType(typeof(Booking), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpPost]
     public async Task<IActionResult> CreateBooking(CreateBookingDto bookingDto)
     {
@@ -57,6 +70,17 @@ public class BookingsController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Gets a specific booking by its ID.
+    /// </summary>
+    /// <remarks>
+    /// This will only return a booking if it belongs to the currently authenticated user.
+    /// </remarks>
+    /// <param name="id">The ID of the booking to retrieve.</param>
+    /// <returns>The requested booking details.</returns>
+    /// <response code="200">Returns the booking details.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    /// <response code="404">If no booking is found with that ID for the current user.</response>
     [HttpGet("{id}")]
     public async Task<ActionResult<BookingDetailsDto>> GetBooking(int id)
     {
@@ -89,6 +113,14 @@ public class BookingsController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Gets all bookings for the currently authenticated user.
+    /// </summary>
+    /// <returns>A list of the user's bookings.</returns>
+    /// <response code="200">Returns the list of bookings.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    [ProducesResponseType(typeof(IEnumerable<BookingDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [HttpGet("my-bookings")]
     public async Task<ActionResult<IEnumerable<BookingDetailsDto>>> GetMyBookings()
     {

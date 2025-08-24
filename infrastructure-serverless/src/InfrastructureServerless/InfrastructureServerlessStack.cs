@@ -14,7 +14,7 @@ public class InfrastructureServerlessStack : Stack
 {
     internal InfrastructureServerlessStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props)
     {
-        Vpc vpc = new(this, "BookingApiVpc", new VpcProps { MaxAzs = 2 });
+        Vpc vpc = new(this, "BookingApiVpc", new VpcProps { MaxAzs = 2, NatGateways = 0 });
 
         DatabaseCluster dbCluster = new(this, "Database", new DatabaseClusterProps
         {
