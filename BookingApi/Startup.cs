@@ -21,33 +21,51 @@ public class Startup
     {
         services.AddControllers();
 
-        DbConnectionInfoDto dbInfo = BookingApi.Helpers.DatabaseConfigHelper.GetDbConnectionInfoAsync()
+        string? connectionString;
+        string? jwtKeyValue;
+        string? issuer;
+        string? setupKeyValue;
+
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+        if (env == "Development")
+        {
+            connectionString = Configuration.GetConnectionString("DefaultConnection");
+            jwtKeyValue = Configuration["Jwt:Key"];
+            issuer = Configuration["Jwt:Issuer"];
+            setupKeyValue = Configuration["AdminSetupKey"];
+        }
+        else
+        {
+            DbConnectionInfoDto dbInfo = BookingApi.Helpers.DatabaseConfigHelper.GetDbConnectionInfoAsync()
             .GetAwaiter().GetResult();
 
-        string connectionString =
-            $"Host={dbInfo.Host};" +
-            $"Port=5432;" +
-            $"Database={dbInfo.Database};" +
-            $"Username={dbInfo.Username};" +
-            $"Password={dbInfo.Password};" +
-            $"Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
+            connectionString =
+                $"Host={dbInfo.Host};" +
+                $"Port=5432;" +
+                $"Database={dbInfo.Database};" +
+                $"Username={dbInfo.Username};" +
+                $"Password={dbInfo.Password};" +
+                $"Pooling=true;SSL Mode=Require;Trust Server Certificate=true;";
 
-        services.AddDbContext<BookingDbContext>(options =>
-            options.UseNpgsql(connectionString));
-
-        string? jwtKeyEnv = Environment.GetEnvironmentVariable("Jwt__Key")
+            string? jwtKeyEnv = Environment.GetEnvironmentVariable("Jwt__Key")
                     ?? Configuration["Jwt:Key"];
-        string? jwtKeyValue = SecretHelper.ResolveAsync(jwtKeyEnv).GetAwaiter().GetResult();
 
-        string? issuer = Configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("Jwt__Issuer");
+            jwtKeyValue = SecretHelper.ResolveAsync(jwtKeyEnv).GetAwaiter().GetResult();
 
-        string? setupKeyEnv = Environment.GetEnvironmentVariable("AdminSetupKey")
+            issuer = Configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("Jwt__Issuer");
+
+            string? setupKeyEnv = Environment.GetEnvironmentVariable("AdminSetupKey")
                       ?? Configuration["AdminSetupKey"];
-        string? setupKeyValue = SecretHelper.ResolveAsync(setupKeyEnv).GetAwaiter().GetResult();
+            setupKeyValue = SecretHelper.ResolveAsync(setupKeyEnv).GetAwaiter().GetResult();
+        }
 
         Configuration["Jwt:Key"] = jwtKeyValue;
         Configuration["Jwt:Issuer"] = issuer;
-        Configuration["AdminSetupKey"] = setupKeyValue;  
+        Configuration["AdminSetupKey"] = setupKeyValue;
+
+        services.AddDbContext<BookingDbContext>(options =>
+            options.UseNpgsql(connectionString));
 
         services.AddAuthentication(options =>
         {
