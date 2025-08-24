@@ -1,22 +1,34 @@
 ﻿using BookingApi.Data;
+using BookingApi.Data.Dtos;
+using BookingApi.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 using System.Text;
-using BookingApi.Data.Dtos;
-using BookingApi.Helpers;
 
 namespace BookingApi;
 
-public class Startup
+/// <summary>
+/// Configures the services and the application's request pipeline.
+/// This class is used by the host builder in Program.cs.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="Startup"/> class.
+/// </remarks>
+/// <param name="configuration">The application's configuration properties.</param>
+public class Startup(IConfiguration configuration)
 {
-    public Startup(IConfiguration configuration)
-    {
-        Configuration = configuration;
-    }
+    /// <summary>
+    /// Gets the application's configuration properties.
+    /// </summary>
+    public IConfiguration Configuration { get; } = configuration;
 
-    public IConfiguration Configuration { get; }
-
+    /// <summary>
+    /// This method gets called by the runtime. Use this method to add services to the container.
+    /// </summary>
+    /// <param name="services">The collection of services to add to the application.</param>
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
@@ -85,9 +97,25 @@ public class Startup
             };
         });
 
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Booking API",
+                Version = "v1",
+                Description = "A professional REST API for a booking system built with .NET."
+            });
+
+            var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+        });
     }
 
+    /// <summary>
+    /// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+    /// </summary>
+    /// <param name="app">The application's request pipeline builder.</param>
+    /// <param name="env">The hosting environment information.</param>
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         using (IServiceScope scope = app.ApplicationServices.CreateScope())
@@ -96,11 +124,8 @@ public class Startup
             db.Database.Migrate();
         }
 
-        if (env.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI();
 
         app.UseHttpsRedirection();
         app.UseRouting();
