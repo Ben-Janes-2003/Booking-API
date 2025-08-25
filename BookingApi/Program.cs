@@ -27,7 +27,10 @@ public class Program
             try
             {
                 BookingDbContext dbContext = services.GetRequiredService<BookingDbContext>();
-                await dbContext.Database.MigrateAsync();
+                if (dbContext.Database.IsRelational())
+                {
+                    await dbContext.Database.MigrateAsync();
+                }
             }
             catch (Exception ex)
             {

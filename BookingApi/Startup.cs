@@ -40,14 +40,7 @@ public class Startup(IConfiguration configuration)
 
         var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 
-        if (env == "Development")
-        {
-            connectionString = Configuration.GetConnectionString("DefaultConnection");
-            jwtKeyValue = Configuration["Jwt:Key"];
-            issuer = Configuration["Jwt:Issuer"];
-            setupKeyValue = Configuration["AdminSetupKey"];
-        }
-        else
+        if (env == "Production")
         {
             DbConnectionInfoDto dbInfo = BookingApi.Helpers.DatabaseConfigHelper.GetDbConnectionInfoAsync()
             .GetAwaiter().GetResult();
@@ -70,6 +63,13 @@ public class Startup(IConfiguration configuration)
             string? setupKeyEnv = Environment.GetEnvironmentVariable("AdminSetupKey")
                       ?? Configuration["AdminSetupKey"];
             setupKeyValue = SecretHelper.ResolveAsync(setupKeyEnv).GetAwaiter().GetResult();
+        }
+        else
+        {
+            connectionString = Configuration.GetConnectionString("DefaultConnection");
+            jwtKeyValue = Configuration["Jwt:Key"];
+            issuer = Configuration["Jwt:Issuer"];
+            setupKeyValue = Configuration["AdminSetupKey"];
         }
 
         Configuration["Jwt:Key"] = jwtKeyValue;
@@ -106,8 +106,38 @@ public class Startup(IConfiguration configuration)
                 Description = "A professional REST API for a booking system built with .NET."
             });
 
-            var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                In = ParameterLocation.Header,
+                Description = "Please enter a valid token",
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                BearerFormat = "JWT",
+                Scheme = "Bearer"
+            });
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    new string[]{}
+                }
+            });
+
+            string xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+        });
+
+        services.AddRouting(options =>
+        {
+            options.LowercaseUrls = true;
+            options.LowercaseQueryStrings = true;
         });
     }
 
@@ -121,7 +151,10 @@ public class Startup(IConfiguration configuration)
         using (IServiceScope scope = app.ApplicationServices.CreateScope())
         {
             BookingDbContext db = scope.ServiceProvider.GetRequiredService<BookingApi.Data.BookingDbContext>();
-            db.Database.Migrate();
+            if (!env.IsEnvironment("Testing") && db.Database.IsRelational())
+            {
+                db.Database.Migrate();
+            }
         }
 
         app.UseSwagger();

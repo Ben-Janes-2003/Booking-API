@@ -28,11 +28,11 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
     /// Registers a new user in the system with the default "User" role.
     /// </summary>
     /// <param name="request">The user's details for registration.</param>
-    /// <response code="200">User was registered successfully.</response>
-    /// <response code="400">If a user with the same email already exists.</response>
+    /// <response code="201">User was registered successfully.</response>
+    /// <response code="409">If a user with the same email already exists.</response>
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserRegistrationDto request)
-    {
+    { 
         try
         {
             bool userExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
@@ -40,7 +40,7 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
             if (userExists)
             {
                 _logger.LogWarning("User registration failed: Email already exists.");
-                return BadRequest("Email already exists.");
+                return Conflict("Email already exists.");
             }
 
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -54,7 +54,9 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok("User registered successfully.");
+            var response = new { user.Id, user.Name, user.Email };
+
+            return StatusCode(StatusCodes.Status201Created, response);
         }
         catch (Exception ex)
         {
@@ -127,8 +129,8 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
     /// </remarks>
     /// <param name="request">The details for the new admin and the required setup key.</param>
     /// <response code="200">Admin user was created successfully.</response>
-    /// <response code="400">If an admin user already exists in the database.</response>
     /// <response code="401">If the provided setup key is invalid.</response>
+    /// <response code="409">If an admin user already exists in the database.</response>
     [HttpPost("setup-admin")]
     public async Task<IActionResult> SetupAdmin(AdminSetupDto request)
     {
@@ -142,7 +144,7 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
 
             if (await _context.Users.AnyAsync(u => u.Role == Role.Admin))
             {
-                return BadRequest("An admin user already exists.");
+                return Conflict("An admin user already exists.");
             }
 
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -157,7 +159,9 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
             _context.Users.Add(adminUser);
             await _context.SaveChangesAsync();
 
-            return Ok("Admin user created successfully.");
+            var response = new { adminUser.Id, adminUser.Name, adminUser.Email, adminUser.Role };
+
+            return StatusCode(StatusCodes.Status201Created, response);
         }
         catch (Exception ex)
         {
