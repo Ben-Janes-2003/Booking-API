@@ -29,13 +29,13 @@ public class BookingsController(BookingDbContext context, ILogger<BookingsContro
     /// <param name="bookingDto">The ID of the time slot to be booked.</param>
     /// <returns>The newly created booking record.</returns>
     /// <response code="201">Returns the newly created booking.</response>
-    /// <response code="400">If the time slot is no longer available.</response>
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="404">If the requested time slot does not exist.</response>
+    /// <response code="409">If the time slot is no longer available.</response>
     [ProducesResponseType(typeof(Booking), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [HttpPost]
     public async Task<IActionResult> CreateBooking(CreateBookingDto bookingDto)
     {
@@ -49,7 +49,7 @@ public class BookingsController(BookingDbContext context, ILogger<BookingsContro
                 
             if (timeSlot.IsBooked)
             {
-                return BadRequest("This time slot is no longer available.");
+                return Conflict("This time slot is no longer available.");
             }
 
             timeSlot.IsBooked = true;

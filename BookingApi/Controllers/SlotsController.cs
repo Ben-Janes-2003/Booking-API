@@ -39,6 +39,7 @@ public class SlotsController(BookingDbContext context, ILogger<SlotsController> 
                 .Where(slot => !slot.IsBooked)
                 .Select(slot => new TimeSlotDto
                 {
+                    Id = slot.Id,
                     StartTime = slot.StartTime,
                     DurationMinutes = slot.DurationMinutes
                 })
