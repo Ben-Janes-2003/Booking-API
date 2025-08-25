@@ -1,12 +1,13 @@
 using Amazon.CDK;
 using Amazon.CDK.AWS.Apigatewayv2;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.Lambda;
+using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.RDS;
 using Amazon.CDK.AWS.SecretsManager;
 using Amazon.CDK.AwsApigatewayv2Integrations;
 using Constructs;
 using System.Collections.Generic;
-using Amazon.CDK.AWS.Lambda;
 
 namespace InfrastructureServerless;
 
@@ -21,22 +22,30 @@ public class InfrastructureServerlessStack : Stack
             Service = InterfaceVpcEndpointAwsService.SECRETS_MANAGER
         });
 
-        DatabaseCluster dbCluster = new(this, "Database", new DatabaseClusterProps
+        vpc.AddInterfaceEndpoint("CloudWatchLogsEndpoint", new InterfaceVpcEndpointOptions
         {
-            Engine = DatabaseClusterEngine.AuroraPostgres(new AuroraPostgresClusterEngineProps
+            Service = InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS
+        });
+
+        DatabaseInstance dbInstance = new DatabaseInstance(this, "Database", new DatabaseInstanceProps
+        {
+            Engine = DatabaseInstanceEngine.Postgres(new PostgresInstanceEngineProps
             {
-                Version = AuroraPostgresEngineVersion.VER_15_3
+                Version = PostgresEngineVersion.VER_15
             }),
             Vpc = vpc,
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
-            Writer = ClusterInstance.ServerlessV2("writer"),
-            ServerlessV2MinCapacity = 0.5,
-            ServerlessV2MaxCapacity = 1.0,
-            EnableDataApi = false,
-            DefaultDatabaseName = "bookingdb"
+            InstanceType = Amazon.CDK.AWS.EC2.InstanceType.Of(InstanceClass.BURSTABLE4_GRAVITON , InstanceSize.MICRO),
+            MultiAz = false,
+            AllocatedStorage = 20,
+            RemovalPolicy = RemovalPolicy.DESTROY,
+            DeletionProtection = false,
+            Credentials = Credentials.FromGeneratedSecret("postgres"),
+            DatabaseName = "bookingdb",
+            StorageEncrypted = true
         });
 
-        ISecret dbSecret = dbCluster.Secret;
+        ISecret dbSecret = dbInstance.Secret;
         ISecret jwtKeySecret = Secret.FromSecretNameV2(this, "JwtKey", "BookingApi/JwtKey");
         ISecret adminSetupKeySecret = Secret.FromSecretNameV2(this, "AdminSetupKey", "BookingApi/AdminSetupKey");
 
@@ -47,8 +56,8 @@ public class InfrastructureServerlessStack : Stack
             Code = Code.FromAsset("../BookingApi/bin/Release/net8.0/publish.zip"),
             Vpc = vpc,
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
-            MemorySize = 512,
             Timeout = Duration.Seconds(30),
+            MemorySize = 256,
             Environment = new Dictionary<string, string>
             {
                 { "ASPNETCORE_ENVIRONMENT", "Production" },
@@ -62,11 +71,22 @@ public class InfrastructureServerlessStack : Stack
         jwtKeySecret.GrantRead(apiFunction);
         adminSetupKeySecret.GrantRead(apiFunction);
 
-        dbCluster.Connections.AllowDefaultPortFrom(apiFunction);
+        dbInstance.Connections.AllowDefaultPortFrom(apiFunction);
 
         HttpApi httpApi = new(this, "BookingApiGateway", new HttpApiProps
         {
-            DefaultIntegration = new HttpLambdaIntegration("ApiIntegration", apiFunction)
+            DefaultIntegration = new HttpLambdaIntegration("ApiIntegration", apiFunction),
+            CorsPreflight = new CorsPreflightOptions
+            {
+                AllowOrigins = new[] { "*" },
+                AllowMethods = new[] { CorsHttpMethod.GET, CorsHttpMethod.POST }
+            }
+        });
+
+        new LogGroup(this, "ApiLogGroup", new LogGroupProps
+        {
+            Retention = RetentionDays.ONE_WEEK,
+            RemovalPolicy = RemovalPolicy.DESTROY
         });
 
         apiFunction.AddEnvironment("Jwt__Issuer", httpApi.Url!);
