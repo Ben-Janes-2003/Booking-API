@@ -79,7 +79,15 @@ public class InfrastructureServerlessStack : Stack
             CorsPreflight = new CorsPreflightOptions
             {
                 AllowOrigins = new[] { "*" },
-                AllowMethods = new[] { CorsHttpMethod.GET, CorsHttpMethod.POST }
+                AllowMethods = new[]
+                {
+                    CorsHttpMethod.GET,
+                    CorsHttpMethod.POST,
+                    CorsHttpMethod.PUT,
+                    CorsHttpMethod.DELETE,
+                    CorsHttpMethod.OPTIONS
+                },
+                AllowHeaders = new[] { "Content-Type", "Authorization" },
             }
         });
 
