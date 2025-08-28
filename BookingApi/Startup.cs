@@ -33,6 +33,17 @@ public class Startup(IConfiguration configuration)
     {
         services.AddControllers();
 
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowViteDevServer",
+            policy =>
+            {
+                policy.WithOrigins("http://localhost:5173")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            });
+        });
+
         string? connectionString;
         string? jwtKeyValue;
         string? issuer;
@@ -162,6 +173,12 @@ public class Startup(IConfiguration configuration)
 
         app.UseHttpsRedirection();
         app.UseRouting();
+        
+        if (env.IsDevelopment())
+        {
+            app.UseCors("AllowViteDevServer");
+        }
+
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
