@@ -39,13 +39,11 @@ A robust and secure RESTful API for a booking system, built with modern .NET 8 a
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/Ben-Janes-2003/Booking-API.git
+    git clone [https://github.com/Ben-Janes-2003/Booking-API.git](https://github.com/Ben-Janes-2003/Booking-API.git)
     cd Booking-API
     ```
 
-2.  **Create your environment file:**
-    In the root directory, create a `.env` file. This file holds the secrets for your local environment and is ignored by Git. Copy the contents below and replace the placeholder values with your own strong, random keys.
-
+2.  **Create your secrets file:** In the root directory, create a `.env` file. This file holds the secrets for your local Docker environment. Copy the contents below and replace the placeholder values.
     ```env
     DB_PASSWORD=YourStrongPassword123!
     JWT_KEY=YourSuperLongAndSecretJwtKeyGoesHere
@@ -53,8 +51,20 @@ A robust and secure RESTful API for a booking system, built with modern .NET 8 a
     ADMIN_SETUP_KEY=YourSuperSecretAdminSetupKeyGoesHere
     ```
 
-3.  **Run with Docker Compose:**
-    Execute the following command from the root of the project to build and start the API and database containers.
+3.  **Configure the development environment:** Open the `BookingApi/appsettings.Development.json` file. If it doesn't exist, create it. Add the `AllowedOrigin` for your frontend's development server.
+    ```json
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "Microsoft.AspNetCore": "Warning"
+        }
+      },
+      "AllowedOrigin": "http://localhost:5173"
+    }
+    ```
+
+4.  **Run with Docker Compose:** Execute the following command from the root of the project to build and start the API and database containers.
     ```bash
     docker-compose up --build
     ```
