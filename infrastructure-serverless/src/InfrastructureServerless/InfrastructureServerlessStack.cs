@@ -61,6 +61,7 @@ public class InfrastructureServerlessStack : Stack
             Environment = new Dictionary<string, string>
             {
                 { "ASPNETCORE_ENVIRONMENT", "Production" },
+                { "AllowedOrigin", "https://master.d1lkfketw0t027.amplifyapp.com" },
                 { "DB_SECRET_ARN", dbSecret.SecretArn },
                 { "Jwt__Key", jwtKeySecret.SecretArn },
                 { "AdminSetupKey", adminSetupKeySecret.SecretArn }

@@ -35,12 +35,16 @@ public class Startup(IConfiguration configuration)
 
         services.AddCors(options =>
         {
-            options.AddPolicy("AllowViteDevServer",
+            options.AddPolicy("AllowSpecificOrigin",
             policy =>
             {
-                policy.WithOrigins("http://localhost:5173")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod();
+                string? allowedOrigin = Configuration["AllowedOrigin"];
+                if (!string.IsNullOrEmpty(allowedOrigin))
+                {
+                    policy.WithOrigins(allowedOrigin)
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                }
             });
         });
 
@@ -173,11 +177,8 @@ public class Startup(IConfiguration configuration)
 
         app.UseHttpsRedirection();
         app.UseRouting();
-        
-        if (env.IsDevelopment())
-        {
-            app.UseCors("AllowViteDevServer");
-        }
+
+        app.UseCors("AllowSpecificOrigin");
 
         app.UseAuthentication();
         app.UseAuthorization();
