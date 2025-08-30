@@ -128,7 +128,7 @@ public class AuthController(BookingDbContext context, ILogger<AuthController> lo
     /// This is a one-time use endpoint protected by a secret key. It should be called once during the initial setup of a new environment to create the first admin account.
     /// </remarks>
     /// <param name="request">The details for the new admin and the required setup key.</param>
-    /// <response code="200">Admin user was created successfully.</response>
+    /// <response code="201">Admin user was created successfully.</response>
     /// <response code="401">If the provided setup key is invalid.</response>
     /// <response code="409">If an admin user already exists in the database.</response>
     [HttpPost("setup-admin")]
