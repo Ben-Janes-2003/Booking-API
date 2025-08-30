@@ -47,7 +47,7 @@ A robust and secure RESTful API for a booking system, built with modern .NET 8 a
     ```env
     DB_PASSWORD=YourStrongPassword123!
     JWT_KEY=YourSuperLongAndSecretJwtKeyGoesHere
-    JWT_ISSUER=https://localhost:8081
+    JWT_ISSUER=https://localhost:8080
     ADMIN_SETUP_KEY=YourSuperSecretAdminSetupKeyGoesHere
     ```
 
